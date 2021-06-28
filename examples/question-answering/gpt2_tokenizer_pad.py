@@ -31,7 +31,7 @@ class GPT2TokenizerForSQuAD(GPT2Tokenizer):
         **kwargs
     ):
         super().__init__(vocab_file=vocab_file,merges_file=merges_file,errors=errors,unk_token=unk_token,bos_token=bos_token,eos_token=eos_token,add_prefix_space=add_prefix_space,**kwargs)
-        num_tokens = self.add_special_tokens({'pad_token':'<|padtoken|>', 'cls_token': '<CLS>', 'sep_token':'<SEP>'})
+        #num_tokens = self.add_special_tokens({'pad_token':'<|padtoken|>', 'cls_token': '<CLS>', 'sep_token':'<SEP>'})
 
     def build_inputs_with_special_tokens(self, token_ids_0, token_ids_1=None):
         """

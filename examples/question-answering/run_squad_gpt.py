@@ -46,6 +46,7 @@ from transformers.data.metrics.squad_metrics import (
 )
 from transformers.data.processors.squad import SquadResult, SquadV1Processor, SquadV2Processor
 
+from tokenizers import AddedToken
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -742,7 +743,19 @@ def main():
     #)
 
     tokenizer = GPT2TokenizerForSQuAD(vocab_file="vocab.json", merges_file="merges.txt")
+    #https://github.com/huggingface/transformers/issues/9246#issuecomment-803446022
+    tokenizer.add_special_tokens({'pad_token':'<|padtoken|>', 'cls_token': '<CLS>', 'sep_token':'<SEP>'})
     model = GPTForQuestionAnswering(config=config)
+
+    #https://github.com/huggingface/transformers/issues/5393#issuecomment-654342933
+    init_kwargs = {}
+    for key, value in tokenizer.init_kwargs.items():
+        if isinstance(value, AddedToken):
+            init_kwargs[key] = str(value)
+        else:
+            init_kwargs[key] = value
+
+    tokenizer.init_kwargs = init_kwargs
 
     if args.local_rank == 0:
         # Make sure only the first process in distributed training will download model & vocab
@@ -783,8 +796,12 @@ def main():
         torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = AutoModelForQuestionAnswering.from_pretrained(args.output_dir)  # , force_download=True)
-        tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        #model = AutoModelForQuestionAnswering.from_pretrained(args.output_dir)  # , force_download=True)
+        #tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+
+        tokenizer = GPT2TokenizerForSQuAD.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        model = GPTForQuestionAnswering.from_pretrained(args.output_dir)
+
         model.to(args.device)
 
     # Evaluation - we can ask to evaluate all the checkpoints (sub-directories) in a directory
@@ -808,7 +825,8 @@ def main():
         for checkpoint in checkpoints:
             # Reload the model
             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
-            model = AutoModelForQuestionAnswering.from_pretrained(checkpoint)  # , force_download=True)
+            #model = AutoModelForQuestionAnswering.from_pretrained(checkpoint)  # , force_download=True)
+            model = GPTForQuestionAnswering.from_pretrained(checkpoint)
             model.to(args.device)
 
             # Evaluate
